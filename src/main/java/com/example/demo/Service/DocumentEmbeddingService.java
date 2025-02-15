@@ -11,6 +11,9 @@
     import org.springframework.stereotype.Service;
     import org.springframework.transaction.annotation.Transactional;
     import com.fasterxml.jackson.core.JsonProcessingException;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RequestBody;
+
     import java.util.ArrayList;
     import java.util.List;
     import java.util.regex.Matcher;
@@ -84,7 +87,7 @@
             }
 
             try {
-                // Lấy embedding cho toàn bộ nội dung gốc
+
                 List<Double> embeddingVector = embeddingService.getEmbedding(content);
                 String embeddingJson = objectMapper.writeValueAsString(embeddingVector);
 
@@ -110,20 +113,25 @@
             public static List<String> splitText(String text) {
                 List<String> chunks = new ArrayList<>();
 
-                Pattern pattern = Pattern.compile(
-                        "(Chương \\w+|Mục \\w+|Điều \\d+:.*?|Khoản \\d+.*?|Điểm [a-z]+.*?)" +
-                                "(?=(Chương \\w+|Mục \\w+|Điều \\d+:|Khoản \\d+|Điểm [a-z]+|$))",
-                        Pattern.DOTALL
-                );
+                String[] words = text.split("\\s+"); // Tách theo dấu cách
+                StringBuilder currentChunk = new StringBuilder();
+                int count = 0;
 
-                Matcher matcher = pattern.matcher(text);
-
-                while (matcher.find()) {
-                    chunks.add(matcher.group(1).trim());
+                for (String word : words) {
+                    currentChunk.append(word).append(" ");
+                    count++;
+                    if (count >= 300) {
+                        chunks.add(currentChunk.toString().trim());
+                        currentChunk = new StringBuilder();
+                        count = 0;
+                    }
                 }
-
+                if (!currentChunk.isEmpty()) {
+                    chunks.add(currentChunk.toString().trim());
+                }
                 return chunks;
             }
 
         }
+
     }

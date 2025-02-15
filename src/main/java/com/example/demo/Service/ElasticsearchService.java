@@ -15,16 +15,19 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ElasticsearchService {
-
     @Autowired
     private ElasticsearchClient client;
     @Autowired
     private OllamaEmbeddingService ollamaEmbeddingService;
+    @Autowired
+    OpenAIService openAIService;
+
     // Hàm thực hiện tìm kiếm KNN
-    public List<Object> searchKnn(String knnRequest) throws IOException {
+    public List<String> searchKnn(String knnRequest) throws IOException {
         // Tạo truy vấn KNN
         List<Double> queryEmbedding = ollamaEmbeddingService.getEmbedding(knnRequest);
         List<Float> queryEmbeddingFloat = queryEmbedding.stream()
@@ -56,14 +59,49 @@ public class ElasticsearchService {
 
 
         // Gửi yêu cầu và nhận kết quả tìm kiếm
-        SearchResponse<Object> response = client.search(request, Object.class);
+        SearchResponse<Map> response = client.search(request, Map.class);
         response.hits().hits().forEach(hit -> {
             System.out.println("Hit source: " + hit.source());
             System.out.println("Hit score: " + hit.score());
         });
+        System.out.println("Raw Response: " + response.toString());
         // Trả về kết quả
-        return response.hits().hits().stream()
-                .map(Hit::source)
-                .toList();
+        List<String> results = new ArrayList<>();
+        for (Hit<Map> hit : response.hits().hits()) {
+            Map source = hit.source();
+            if (source != null && source.containsKey("chunkText")) {
+                Object content = source.get("chunkText");
+                if (content instanceof String) {
+                    results.add((String) content);
+                } else {
+                    System.out.println("⚠️ chunkText không phải String: " + content.getClass());
+                }
+            } else {
+                System.out.println("❌ Không tìm thấy 'chunkText' trong kết quả: " + source);
+            }
+
+        }
+
+
+        return results;
+    }
+    public String searchLegalDocuments(String userQuery) throws IOException {
+        // 🔍 1️⃣ Tìm kiếm các chunk liên quan từ Elasticsearch
+        List<String> chunks = searchKnn(userQuery);
+        System.out.println(chunks);
+        if (chunks.isEmpty()) {
+            return "Không tìm thấy văn bản nào phù hợp với câu hỏi của bạn.";
+        }
+
+        if (chunks.isEmpty()) {
+            return "Không tìm thấy văn bản nào phù hợp với câu hỏi của bạn.";
+        }
+        // 🏆 2️⃣ Rerank các chunk bằng GPT
+        String relevantText = openAIService.rerankChunks(userQuery, chunks);
+
+        // 📝 3️⃣ Tóm tắt thông tin quan trọng
+        //String summary = openAIService.summarizeChunks(userQuery, List.of(relevantText));
+
+        return relevantText;
     }
 }
