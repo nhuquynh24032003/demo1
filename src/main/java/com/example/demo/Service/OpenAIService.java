@@ -53,7 +53,7 @@ public class OpenAIService {
         String payload = "{"
                 + "\"model\": \"gpt-4o-mini\","
                 + "\"messages\": ["
-               + "{\"role\": \"user\", \"content\": \"Bạn là một trợ lý pháp lý. Khi tôi đưa ra một câu hỏi trích xuất nội dung chính câu hỏi đó lấy những keyword" + userInput + "\"}"
+               + "{\"role\": \"user\", \"content\": \"Bạn là một trợ lý pháp lý. Khi tôi đưa ra một câu hỏi trích xuất nội dung chính câu hỏi đó lấy những keyword và tóm tắt nội dung chính xác để tìm kiếm embedding" + userInput + "\"}"
                 + "]}";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -70,6 +70,7 @@ public class OpenAIService {
                 JsonNode jsonNode = objectMapper.readTree(response.getBody());
 
                 if (jsonNode.has("choices") && jsonNode.get("choices").isArray()) {
+                    System.out.println(jsonNode.get("choices").asText());
                     return jsonNode.get("choices").get(0).get("message").get("content").asText();
                 } else {
                     return "Lỗi: Dữ liệu trả về không đúng định dạng.";

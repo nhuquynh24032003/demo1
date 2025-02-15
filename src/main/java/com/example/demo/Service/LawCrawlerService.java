@@ -84,6 +84,7 @@ public class LawCrawlerService {
 
                     legalDocumentDetailRepository.save(detail);
                     savedCount++;
+
                     System.out.println("Đã lưu chi tiết: " + doc.getDetailUrl());
                 } catch (IOException e) {
                     System.err.println("Lỗi khi lấy nội dung: " + doc.getDetailUrl() + " - " + e.getMessage());
@@ -98,6 +99,7 @@ public class LawCrawlerService {
             if (!legalDocumentDetailRepository.existsByDetailUrl(doc.getDetailUrl())) {
                 Document detailPage = Jsoup.connect(doc.getDetailUrl()).get();
                 Element contentElement = detailPage.select("div.the-document-body.noidungtracuu").first();
+                String title = detailPage.select(".the-document-title").text();
                 String content = (contentElement != null) ? contentElement.text() : "Không tìm thấy nội dung";
                 String issuingAgency = extractTableText(detailPage, "Cơ quan ban hành:");
                 String officialGazetteNumber = extractTableText(detailPage, "Số công báo:");
@@ -124,6 +126,7 @@ public class LawCrawlerService {
                 detail.setIssuedDate(parseDate(issuedDate)); // Chuyển đổi sang LocalDate
                 detail.setEffectiveDate(effectiveDate);
                 detail.setFields(fields);
+                detail.setTitle(title);
 
                 legalDocumentDetailRepository.save(detail);
               //  System.out.println("Đã lưu chi tiết: " + doc.getDetailUrl());
@@ -165,5 +168,4 @@ public class LawCrawlerService {
             return null; // Trả về null nếu không thể parse ngày
         }
     }
-
 }

@@ -18,6 +18,9 @@ public class DocumentDetailEmbedding {
     @Column(name = "chunk_index", nullable = false)
     private int chunkIndex;
 
+    @Column(name = "title", nullable = false)
+    private String title;
+
     @Column(name = "chunk_text", columnDefinition = "TEXT", nullable = false)
     private String chunkText;
 
@@ -76,5 +79,12 @@ public class DocumentDetailEmbedding {
 
     public void setEmbedding(String embedding) {
         this.embedding = embedding;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+    public void setTitle(String title) {
+        this.title = title;
     }
 }

@@ -24,6 +24,9 @@ public class DocumentDetailEmbeddingES {
     @Field(type = FieldType.Text)
     private String content;
 
+    @Field(type = FieldType.Text)
+    private String title;
+
     @Field(type = FieldType.Dense_Vector, dims = 768)
     private List<Double> embedding;
 
@@ -54,4 +57,7 @@ public class DocumentDetailEmbeddingES {
 
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
+
+    public String getTitle() { return title; }
+    public void setTitle(String content) { this.title = title; }
 }

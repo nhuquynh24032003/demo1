@@ -27,8 +27,9 @@ public class DocumentEmbeddingController {
     public ResponseEntity<String> processEmbeddingForAll() {
         try {
             List<LegalDocumentDetail> allDocuments = legalDocumentDetailRepository.findAll();
+            System.out.println(allDocuments);
             for (LegalDocumentDetail document : allDocuments) {
-                documentEmbeddingService.processAndSaveEmbeddings2(document.getId());
+                documentEmbeddingService.processAndSaveEmbeddings(document.getId());
             }
             return ResponseEntity.ok("Embedding cho tất cả tài liệu đã được xử lý thành công.");
         } catch (Exception e) {

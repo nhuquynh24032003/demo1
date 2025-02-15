@@ -2,6 +2,7 @@ package com.example.demo.Service;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.KnnSearch;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch._types.KnnQuery;
@@ -30,16 +31,22 @@ public class ElasticsearchService {
                 .map(Double::floatValue)
                 .toList();
 
-        KnnQuery knnQuery = KnnQuery.of(q -> q
+        KnnSearch knnSearch = KnnSearch.of(q -> q
                 .field("embedding") // Trường chứa vector embedding
-                .k(5) // Số lượng kết quả gần nhất
+                .k(10)
+                .numCandidates(100)// Số lượng kết quả gần nhất
                 .queryVector(queryEmbeddingFloat) // Vector truy vấn
         );
-
+        Query fulltextQuery = Query.of(q -> q
+                .match(m -> m
+                        .field("content")
+                        .query(knnRequest)
+                )
+        );
         SearchRequest request = new SearchRequest.Builder()
                 .index("document_embedding") // Chỉ mục Elasticsearch
-                .knn(k -> k
-                        .field("embedding")) // Truy vấn KNN
+                .knn(knnSearch)
+                .query(fulltextQuery)// Truy vấn KNN
                 .sort(s -> s
                         .field(f -> f
                                 .field("_score") // Sắp xếp theo độ tương đồng (score)

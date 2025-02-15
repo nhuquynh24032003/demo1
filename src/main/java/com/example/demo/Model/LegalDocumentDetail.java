@@ -24,7 +24,7 @@ public class LegalDocumentDetail {
     private String publicationDate; // Ngày đăng công báo
     private String documentType; // Loại văn bản
     private String signer; // Người ký
-
+    private String title;
     private LocalDate issuedDate; // Ngày ban hành
     private String effectiveDate; // Ngày hết hiệu lực
     private String fields; // Lĩnh vực
@@ -116,5 +116,7 @@ public class LegalDocumentDetail {
     public String getFields() {
         return fields;
     }
+    public String getTitle() { return title; }
+    public void setTitle(String content) { this.title = title; }
 
 }
