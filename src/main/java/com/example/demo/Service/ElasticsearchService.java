@@ -2,20 +2,21 @@ package com.example.demo.Service;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.KnnSearch;
+
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
-import co.elastic.clients.elasticsearch._types.KnnQuery;
+import co.elastic.clients.elasticsearch.core.search.HighlightField;
 import co.elastic.clients.elasticsearch.core.search.Hit;
-import com.example.demo.Service.OllamaEmbeddingService;
+import com.example.demo.Model.DocumentDetailEmbeddingES;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class ElasticsearchService {
@@ -25,25 +26,53 @@ public class ElasticsearchService {
     private OllamaEmbeddingService ollamaEmbeddingService;
     @Autowired
     OpenAIService openAIService;
-
+    @Autowired
+    private ObjectMapper objectMapper;
     // Hàm thực hiện tìm kiếm KNN
-    public List<String> searchKnn(String knnRequest) throws IOException {
-        // Tạo truy vấn KNN
-        List<Double> queryEmbedding = ollamaEmbeddingService.getEmbedding(knnRequest);
+    public List<String> searchKnn(String query) throws IOException {
+        String answer = openAIService.generateAnswer(query);
+        JsonNode rootNode = objectMapper.readTree(answer);
+        //   String content = rootNode.path("choices").get(0).path("message").path("content").asText();
+        //  content = content.replaceAll("(?s)```json|```", "").trim();
+        String content = rootNode.path("choices").get(0).path("message").path("content").asText();
+
+// Loại bỏ code block và trim lại chuỗi
+        content = content.replaceAll("(?s)```json|```", "").trim();
+        //   List<String> keywords =  Arrays.asList(objectMapper.readValue(content, String[].class));
+        System.out.println(content);
+        JsonNode jsonNode = objectMapper.readTree(content);
+
+        // Lấy danh sách keywords
+        List<String> keywords = objectMapper.convertValue(jsonNode.get("keywords"), new TypeReference<List<String>>() {});
+
+        System.out.println("Từ khóa trích xuất: " + keywords);
+
+
+
+        List<Double> queryEmbedding = ollamaEmbeddingService.getEmbedding(query);
         List<Float> queryEmbeddingFloat = queryEmbedding.stream()
                 .map(Double::floatValue)
                 .toList();
 
         KnnSearch knnSearch = KnnSearch.of(q -> q
                 .field("embedding") // Trường chứa vector embedding
-                .k(10)
-                .numCandidates(100)// Số lượng kết quả gần nhất
+                .k(20)
+
                 .queryVector(queryEmbeddingFloat) // Vector truy vấn
         );
+
         Query fulltextQuery = Query.of(q -> q
-                .match(m -> m
-                        .field("content")
-                        .query(knnRequest)
+                .bool(b -> b
+                        .should(keywords.stream()
+                                .map(keyword ->  Query.of(q2 -> q2
+                                        .match(m -> m
+                                                .field("chunkText") // Tìm trong trường "content"
+                                                .query(keyword)
+                                        )
+                                ))
+                                .toList()
+                        )
+                        .minimumShouldMatch(String.valueOf(1))
                 )
         );
         SearchRequest request = new SearchRequest.Builder()
@@ -70,14 +99,14 @@ public class ElasticsearchService {
         for (Hit<Map> hit : response.hits().hits()) {
             Map source = hit.source();
             if (source != null && source.containsKey("chunkText")) {
-                Object content = source.get("chunkText");
-                if (content instanceof String) {
-                    results.add((String) content);
+                Object content2 = source.get("chunkText");
+                if (content2 instanceof String) {
+                    results.add((String) content2);
                 } else {
-                    System.out.println("⚠️ chunkText không phải String: " + content.getClass());
+                    System.out.println("chunkText không phải String: " + content2.getClass());
                 }
             } else {
-                System.out.println("❌ Không tìm thấy 'chunkText' trong kết quả: " + source);
+                System.out.println("Không tìm thấy 'chunkText' trong kết quả: " + source);
             }
 
         }
@@ -97,11 +126,88 @@ public class ElasticsearchService {
             return "Không tìm thấy văn bản nào phù hợp với câu hỏi của bạn.";
         }
         // 🏆 2️⃣ Rerank các chunk bằng GPT
-        String relevantText = openAIService.rerankChunks(userQuery, chunks);
 
-        // 📝 3️⃣ Tóm tắt thông tin quan trọng
-        //String summary = openAIService.summarizeChunks(userQuery, List.of(relevantText));
+
+       String relevantText = openAIService.rerankChunks(userQuery, chunks);
+
 
         return relevantText;
     }
+    public List<Map<String, Object>> searchDocuments(String query) throws IOException {
+        String answer = openAIService.generateAnswer(query);
+        JsonNode rootNode = objectMapper.readTree(answer);
+        String content = rootNode.path("choices").get(0).path("message").path("content").asText();
+        content = content.replaceAll("(?s)```json|```", "").trim();
+
+        List<String> keywords =  Arrays.asList(objectMapper.readValue(content, String[].class));
+
+        System.out.println("Từ khóa trích xuất: " + keywords);
+
+        List<Double> embeddingVector = ollamaEmbeddingService.getEmbedding(query);
+        List<Float> queryEmbeddingFloat = embeddingVector.stream()
+                .map(Double::floatValue)
+                .toList();
+
+        SearchRequest request = new SearchRequest.Builder()
+                .index("document_embedding")
+                .knn(knnQuery -> knnQuery
+                        .field("embedding")
+                        .queryVector(queryEmbeddingFloat)
+                        .numCandidates(100)
+                        .k(20)
+                )
+                .query(q -> q
+                        .bool(b -> b
+                                .must(m -> m
+                                        .multiMatch(mm -> mm
+                                                .fields(Arrays.asList("chunkText", "title"))
+                                                .query(String.join(" ", keywords))
+                                        )
+                                )
+                        )
+                )
+                .highlight(h -> h
+                        .fields("chunkText", new HighlightField.Builder().build())
+                        .preTags("<b style='background-color: yellow;'>")
+                        .postTags("</b>")
+                )
+                .build();
+
+        SearchResponse<DocumentDetailEmbeddingES> response = client.search(request, DocumentDetailEmbeddingES.class);
+        List<Map<String, Object>> results = new ArrayList<>();
+        for (Hit<DocumentDetailEmbeddingES> hit : response.hits().hits()) {
+            Map result = objectMapper.convertValue(hit.source(), Map.class);
+            result.put("highlight", hit.highlight().get("chunkText"));
+            results.add(result);
+        } Map<String, Map<String, Object>> groupedResults = new HashMap<>();
+        for (Hit<DocumentDetailEmbeddingES> hit : response.hits().hits()) {
+            Map result = objectMapper.convertValue(hit.source(), Map.class);
+            Object documentIdObj  =  result.get("documentId");
+            String documentId;
+            if (documentIdObj instanceof String) {
+                documentId = (String) documentIdObj;
+            } else if (documentIdObj instanceof Number) {
+                documentId = documentIdObj.toString();
+            } else {
+                documentId = "UNKNOWN"; // Giá trị mặc định nếu không xác định được
+            }
+            // Lấy danh sách highlight
+            List<String> highlights = hit.highlight() != null ? hit.highlight().get("chunkText") : Collections.emptyList();
+
+            // Nếu documentId đã có trong groupedResults, gộp highlight lại
+            if (groupedResults.containsKey(documentId)) {
+                Map<String, Object> existingResult = groupedResults.get(documentId);
+
+                // Gộp highlight từ nhiều chunk khác nhau
+                List<String> existingHighlights = (List<String>) existingResult.get("highlight");
+                existingHighlights.addAll(highlights);
+            } else {
+                // Nếu chưa có documentId này, thêm vào map
+                result.put("highlight", new ArrayList<>(highlights));
+                groupedResults.put(documentId, result);
+            }
+        }
+        return new ArrayList<>(groupedResults.values());
+    }
+
 }

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/knn")
@@ -18,12 +19,7 @@ public class KnnSearchController {
     @Autowired
     private OpenAIService openAIService;
     // API để tìm kiếm KNN với vector truy vấn
-    @PostMapping("/search")
-    public List<String> searchKnn(@RequestBody String knnRequest) throws IOException {
-        String k = openAIService.generateAnswer(knnRequest);
-        System.out.println(k);
-        return elasticsearchService.searchKnn(openAIService.generateAnswer(knnRequest));
-    }
+
     @GetMapping("/search2")
     public ResponseEntity<String> searchLegalDocuments(@RequestParam String userQuery) {
         try {
@@ -33,6 +29,14 @@ public class KnnSearchController {
             return ResponseEntity.ok(result);
         } catch (IOException e) {
             return ResponseEntity.status(500).body("Lỗi hệ thống: " + e.getMessage());
+        }
+    }
+    @GetMapping("/")
+    public List<Map<String, Object>> search(@RequestParam String query) {
+        try {
+            return elasticsearchService.searchDocuments(query);
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi tìm kiếm", e);
         }
     }
 }
