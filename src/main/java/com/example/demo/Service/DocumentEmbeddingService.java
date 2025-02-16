@@ -20,6 +20,7 @@
     import java.util.List;
     import java.util.regex.Matcher;
     import java.util.regex.Pattern;
+    import java.util.stream.Collectors;
     import java.util.stream.IntStream;
 
     @Service
@@ -39,29 +40,22 @@
             // Lấy nội dung gốc
             String content = document.getContent().trim();
             // Kiểm tra nội dung có hợp lệ không
-            if (content.isEmpty() || "Không tìm thấy nội dung".equalsIgnoreCase(content)) {
-                System.out.println("⚠ Bỏ qua documentId: " + documentId + " vì nội dung trống hoặc không hợp lệ.");
-                return;
-            }
-            List<String> chunks = TextChunker.splitText(document.getContent());
+            boolean hasValidContent = !(content.isEmpty() || "Không tìm thấy nội dung".equalsIgnoreCase(content));
+
+            List<String> chunks = hasValidContent ? TextChunker.splitText(content) : Collections.singletonList("");
 
             //List<DocumentDetailEmbedding> embeddings = new ArrayList<>();
             List<DocumentDetailEmbeddingES> esEmbeddings = new ArrayList<>();
 
             IntStream.range(0, chunks.size()).forEach(index -> {
-                List<Double> embeddingVector = embeddingService.getEmbedding(chunks.get(index));
+                List<Double> embeddingVector = hasValidContent ? embeddingService.getEmbedding(chunks.get(index)) : null;
                 List<Double> embeddingTitleVector = embeddingService.getEmbedding(document.getTitle());
-                // Lưu vào Elasticsearch
-                DocumentDetailEmbeddingES esEntity = new DocumentDetailEmbeddingES();
-                esEntity.setId(documentId + "-" + index); // ID duy nhất
-                esEntity.setDocumentId(documentId);
-                esEntity.setChunkIndex(index);
-                esEntity.setChunkText(chunks.get(index));
-                esEntity.setEmbedding(embeddingVector);
-                esEntity.setEmbedding_title(embeddingTitleVector);
-                esEntity.setTitle(document.getTitle());
+                List<String> fieldList = Arrays.stream(document.getFields().split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .collect(Collectors.toList());
+                DocumentDetailEmbeddingES esEntity = new DocumentDetailEmbeddingES(documentId, index, hasValidContent ? chunks.get(index) : "Nội dung trống", embeddingVector, embeddingTitleVector, document.getIssuingAgency(), document.getOfficialGazetteNumber(), document.getPublicationDate(), document.getDocumentType(), document.getSigner(), document.getTitle(), document.getIssuedDate(), document.getDocumentNumber(), document.getEffectiveDate(), fieldList);
                 esEmbeddings.add(esEntity);
-
             });
 
 

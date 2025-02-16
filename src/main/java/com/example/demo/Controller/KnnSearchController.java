@@ -39,4 +39,15 @@ public class KnnSearchController {
             throw new RuntimeException("Lỗi tìm kiếm", e);
         }
     }
+    @GetMapping("/filter")
+    public List<Map<String, Object>> filterDocuments(
+            @RequestParam(required = false) String issueFrom,
+            @RequestParam(required = false) String issueTo,
+            @RequestParam(required = false) String documentType,
+            @RequestParam(required = false) String issuingAgency,
+            @RequestParam(required = false) String field,
+            @RequestParam(required = false) String signer
+    ) throws IOException {
+        return elasticsearchService.filterDocuments(issueFrom, issueTo, documentType, issuingAgency, field, signer);
+    }
 }

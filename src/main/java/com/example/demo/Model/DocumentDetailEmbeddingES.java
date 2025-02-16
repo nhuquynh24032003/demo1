@@ -6,7 +6,6 @@ import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
-import java.time.LocalDate;
 import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Document(indexName = "document_embedding")
@@ -22,10 +21,6 @@ public class DocumentDetailEmbeddingES {
 
     @Field(type = FieldType.Text)
     private String chunkText;
-
-    @Field(type = FieldType.Text)
-    private String content;
-
     @Field(type = FieldType.Text)
     private String title;
 
@@ -47,21 +42,28 @@ public class DocumentDetailEmbeddingES {
     @Field(type = FieldType.Text)// Loại văn bản
     private String signer;
     @Field(type = FieldType.Text)// Người ký
-    private LocalDate issuedDate;
+    private String issuedDate;
     @Field(type = FieldType.Text)// Ngày ban hành
     private String effectiveDate;
     @Field(type = FieldType.Text)// Ngày hết hiệu lực
-    private String fields;// Lĩnh vực
-
-    public DocumentDetailEmbeddingES() {}
-
-    public DocumentDetailEmbeddingES(Long documentId, int chunkIndex, String chunkText, List<Double> embedding) {
-        this.documentId = documentId;
+    private List<String> fields;// Lĩnh vực
+    public DocumentDetailEmbeddingES(Long documentId, int chunkIndex, String chunkText, List<Double> embedding, List<Double> embedding_title, String issuingAgency, String officialGazetteNumber, String publicationDate, String documentType, String signer, String title, String issuedDate, String documentNumber, String effectiveDate, List<String> fields) {
         this.chunkIndex = chunkIndex;
         this.chunkText = chunkText;
         this.embedding = embedding;
+        this.embedding_title = embedding_title;
+        this.documentId = documentId;
+        this.issuingAgency = issuingAgency;
+        this.officialGazetteNumber = officialGazetteNumber;
+        this.publicationDate = publicationDate;
+        this.documentType = documentType;
+        this.signer = signer;
+        this.title = title;
+        this.issuedDate = issuedDate;
+        this.documentNumber = documentNumber;
+        this.effectiveDate = effectiveDate;
+        this.fields = fields;
     }
-
     // Getters & Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -78,8 +80,6 @@ public class DocumentDetailEmbeddingES {
     public List<Double> getEmbedding() { return embedding; }
     public void setEmbedding(List<Double> embedding) { this.embedding = embedding; }
 
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
@@ -122,10 +122,10 @@ public class DocumentDetailEmbeddingES {
     public String getSigner() {
         return signer;
     }
-    public void setIssuedDate(LocalDate issuedDate) {
+    public void setIssuedDate(String issuedDate) {
         this.issuedDate = issuedDate;
     }
-    public LocalDate getIssuedDate() {
+    public String getIssuedDate() {
         return issuedDate;
     }
     public void setEffectiveDate(String effectiveDate) {
@@ -134,10 +134,10 @@ public class DocumentDetailEmbeddingES {
     public String getEffectiveDate() {
         return effectiveDate;
     }
-    public void setFields(String fields) {
+    public void setFields(List<String> fields) {
         this.fields = fields;
     }
-    public String getFields() {
+    public List<String> getFields() {
         return fields;
     }
 }

@@ -16,4 +16,9 @@ public class LawCrawlerController {
         lawCrawlerService.crawlLawList();
         return "Quá trình crawl đã hoàn tất!";
     }
+    @GetMapping("/crawl-doc")
+    public String crawlDoc() {
+        lawCrawlerService.crawlData();
+        return "Quá trình crawl đã hoàn tất!";
+    }
 }

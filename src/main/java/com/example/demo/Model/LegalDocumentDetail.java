@@ -23,14 +23,14 @@ public class LegalDocumentDetail {
     private String documentType; // Loại văn bản
     private String signer; // Người ký
     private String title;
-    private LocalDate issuedDate; // Ngày ban hành
+    private String issuedDate; // Ngày ban hành
     private String effectiveDate; // Ngày hết hiệu lực
     private String fields; // Lĩnh vực
     @Lob
     @Column(columnDefinition = "LONGTEXT")
     private String pdfUrl;
 
-    public LegalDocumentDetail(String detailUrl, String content,String issuingAgency, String officialGazetteNumber, String publicationDate, String documentType, String signer, String title, LocalDate issuedDate, String documentNumber, String pdfUrl, String fields) {
+    public LegalDocumentDetail(String detailUrl, String content,String issuingAgency, String officialGazetteNumber, String publicationDate, String documentType, String signer, String title, String issuedDate, String documentNumber, String pdfUrl, String fields) {
         this.content = content;
         this.detailUrl = detailUrl;
         this.issuingAgency = issuingAgency;
@@ -115,10 +115,10 @@ public class LegalDocumentDetail {
     public String getSigner() {
         return signer;
     }
-    public void setIssuedDate(LocalDate issuedDate) {
+    public void setIssuedDate(String issuedDate) {
         this.issuedDate = issuedDate;
     }
-    public LocalDate getIssuedDate() {
+    public String getIssuedDate() {
         return issuedDate;
     }
     public void setEffectiveDate(String effectiveDate) {

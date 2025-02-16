@@ -1,8 +1,6 @@
 package com.example.demo.Service;
-import com.example.demo.Model.LegalDocument;
-import com.example.demo.Model.LegalDocumentDetail;
-import com.example.demo.Repository.LegalDocumentDetailRepository;
-import com.example.demo.Repository.LegalDocumentRepository;
+import com.example.demo.Model.*;
+import com.example.demo.Repository.*;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.jsoup.Jsoup;
@@ -13,10 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
-import java.nio.file.StandardCopyOption;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -33,6 +28,10 @@ public class LawCrawlerService {
     LegalDocumentRepository legalDocumentRepository;
     @Autowired
     LegalDocumentDetailRepository legalDocumentDetailRepository;
+    @Autowired
+    FieldRepository fieldRepository;
+    @Autowired
+    DocumentTypeRepository documentTypeRepository;
     private static final int THREAD_POOL_SIZE = 10;
     private static final int TIMEOUT = 15000;
     private static final String BASE_URL = "https://luatvietnam.vn/tim-van-ban.html?Keywords=&SearchOptions=1&SearchByDate=issueDate&DateFrom=&DateTo=";
@@ -45,7 +44,7 @@ public class LawCrawlerService {
 
             List<LegalDocument> newDocuments = new ArrayList<>();
 
-            for (int page = 1; page <= 10; page++) {
+            for (int page = 1; page <= 3; page++) {
                 String url = BASE_URL + "&page=" + page;
                 Document doc = Jsoup.connect(url).get();
                 Elements articles = doc.select(".doc-article");
@@ -118,7 +117,7 @@ public class LawCrawlerService {
             if (content.isEmpty()) {
                 System.out.println("⚠️ Không có nội dung hợp lệ, lưu 'Không có nội dung' cho: " + doc.getDetailUrl());
             }
-            LegalDocumentDetail detail = new LegalDocumentDetail(doc.getDetailUrl(),content, issuingAgency, officialGazetteNumber, publicationDate, documentType, signer, title, parseDate(issuedDate), documentNumber, pdfUrl, fields);
+            LegalDocumentDetail detail = new LegalDocumentDetail(doc.getDetailUrl(),content, issuingAgency, officialGazetteNumber, publicationDate, documentType, signer, title, issuedDate, documentNumber, pdfUrl, fields);
             legalDocumentDetailRepository.save(detail);
             System.out.println("✅ Saved details for: " + doc.getDetailUrl());
         } catch (IOException e) {
@@ -215,4 +214,51 @@ public class LawCrawlerService {
             }
         }
     }
+
+    public void crawlData() {
+        String url = "https://luatvietnam.vn/"; // Thay bằng URL thực tế
+
+        try {
+            // Lấy HTML của trang web
+            Document doc = Jsoup.connect(url).get();
+
+            // Lấy danh sách loại văn bản từ các checkbox trong dropdown
+         //   Elements options = doc.select("#lDocTypeId");
+            Element dropdown = doc.selectFirst("div[data-name=lDocTypeId]");
+            if (dropdown != null) {
+                System.out.println("Data-name: " + dropdown.attr("data-name"));
+                Elements checkboxes = dropdown.select("input[type=checkbox]");
+
+                for (Element checkbox : checkboxes) {
+
+               //     Long id = Long.parseLong(checkbox.attr("value"));
+                    String name = checkbox.parent().text().trim();
+                    String value = checkbox.attr("value");
+                    if (!documentTypeRepository.existsByName(name)) {
+                        documentTypeRepository.save(new DocumentType(name));
+                        System.out.println(name);
+                    }
+                }
+            }
+            Element dropdown2 = doc.selectFirst("div[data-name=OrganId,OrganName]");
+            if (dropdown2 != null) {
+                System.out.println("Data-name: " + dropdown2.attr("data-name"));
+                Elements checkboxes2 = dropdown2.select("input[type=checkbox]");
+
+                for (Element checkbox : checkboxes2) {
+
+                    //     Long id = Long.parseLong(checkbox.attr("value"));
+                    String name = checkbox.parent().text().trim();
+                    String value = checkbox.attr("value");
+                    if (!fieldRepository.existsByName(name)) {
+                        fieldRepository.save(new Field(name));
+                        System.out.println(name);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }

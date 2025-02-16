@@ -1,8 +1,8 @@
 package com.example.demo.Service;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.KnnSearch;
-
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
@@ -213,39 +213,67 @@ public class ElasticsearchService {
         }
         return new ArrayList<>(groupedResults.values());
     }
-    public List<LegalDocument> filterDocuments(
-            LocalDate issueFrom, LocalDate issueTo,
-            LocalDate effectiveFrom, LocalDate effectiveTo,
+    public List<Map<String, Object>> filterDocuments(
+            String issueFrom, String issueTo,
             String documentType, String issuingAgency,
-            String field, String signer) {
-        BoolQuery
-        BoolQueryBuilder query = QueryBuilders.boolQuery();
+            String field, String signer) throws IOException {
 
-        if (issueFrom != null && issueTo != null) {
-            query.must(QueryBuilders.rangeQuery("issue_date").gte(issueFrom).lte(issueTo));
+        List<Query> filters = new ArrayList<>();
+
+       if (issueFrom != null || issueTo != null) {
+            filters.add(Query.of(q -> q.range(RangeQuery.of(rq ->
+                    rq.date(d -> d
+                            .field("issuedDate")
+                            .gte(issueFrom)
+                            .lte(issueTo)
+                    )
+
+            ))));
         }
 
-        if (effectiveFrom != null && effectiveTo != null) {
-            query.must(QueryBuilders.rangeQuery("effective_date").gte(effectiveFrom).lte(effectiveTo));
+
+        // Lọc theo loại văn bản
+        if (documentType != null && !documentType.isEmpty()) {
+            filters.add(Query.of(q -> q.matchPhrase(t -> t.field("documentType").query(documentType))));
         }
 
-        if (documentType != null) {
-            query.must(QueryBuilders.termQuery("document_type", documentType));
-        }
-
+        // Lọc theo cơ quan ban hành
         if (issuingAgency != null) {
-            query.must(QueryBuilders.termQuery("issuing_agency", issuingAgency));
+            filters.add(Query.of(q -> q.match(t -> t.field("issuingAgency").query(issuingAgency))));
         }
-
+        // Lọc theo lĩnh vực hoạt động
         if (field != null) {
-            query.must(QueryBuilders.termQuery("field", field));
+            filters.add(Query.of(q -> q.match(t -> t.field("field").query(field))));
         }
 
+        // Lọc theo người ký
         if (signer != null) {
-            query.must(QueryBuilders.termQuery("signer", signer));
+            filters.add(Query.of(q -> q.match(t -> t.field("signer").query(signer))));
         }
 
-        SearchQuery searchQuery = new NativeSearchQuery(query);
-        return repository.search(searchQuery).getContent();
+        // Kết hợp tất cả bộ lọc với BoolQuery
+        BoolQuery boolQuery = BoolQuery.of(b -> b.must(filters));
+
+        // Thực hiện tìm kiếm
+        SearchResponse<Map> searchResponse = client.search(s -> s
+                        .index("document_embedding")
+                        .query(q -> q.bool(boolQuery))
+                        .source(src -> src.filter(f -> f.includes("documentId")))
+                        .size(1000), // Chỉ lấy trường documentId
+                Map.class);
+
+        Set<Integer> uniqueDocumentIds = new HashSet<>();
+        List<Map<String, Object>> results = new ArrayList<>();
+
+        for (Hit<Map> hit : searchResponse.hits().hits()) {
+            if (hit.source() != null && hit.source().containsKey("documentId")) {
+                Integer documentId = (Integer) hit.source().get("documentId");
+                if (uniqueDocumentIds.add(documentId)) { // Nếu documentId chưa tồn tại, thêm vào danh sách kết quả
+                    results.add(Map.of("documentId", documentId));
+                }
+            }
+        }
+        return results;
     }
+
 }
