@@ -13,7 +13,7 @@ import java.util.Map;
 
 @Service
 public class OpenAIService {
-
+   
     private static final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
     public String rerankChunks(String userInput, List<String> chunks) {
         try {

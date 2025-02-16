@@ -2,6 +2,8 @@ package com.example.demo.Model;
 
 import jakarta.persistence.*;
 
+import java.util.List;
+
 @Entity
 @Table(name = "legal_documents")
 public class LegalDocument {
@@ -47,6 +49,12 @@ public class LegalDocument {
     }
 
     public void setIssueDate(String issueDate) {
+        this.issueDate = issueDate;
+    }
+
+    public LegalDocument(String title, String detailUrl, String issueDate) {
+        this.title = title;
+        this.detailUrl = detailUrl;
         this.issueDate = issueDate;
     }
 }

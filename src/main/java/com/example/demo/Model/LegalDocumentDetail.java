@@ -13,11 +13,9 @@ public class LegalDocumentDetail {
 
     @Column(nullable = false, unique = true)
     private String detailUrl;
-
     @Lob
     @Column(columnDefinition = "LONGTEXT")
     private String content;
-
     private String issuingAgency; // Cơ quan ban hành
     private String officialGazetteNumber; // Số công báo
     private String documentNumber; // Số hiệu
@@ -31,6 +29,25 @@ public class LegalDocumentDetail {
     @Lob
     @Column(columnDefinition = "LONGTEXT")
     private String pdfUrl;
+
+    public LegalDocumentDetail(String detailUrl, String content,String issuingAgency, String officialGazetteNumber, String publicationDate, String documentType, String signer, String title, LocalDate issuedDate, String documentNumber, String pdfUrl, String fields) {
+        this.content = content;
+        this.detailUrl = detailUrl;
+        this.issuingAgency = issuingAgency;
+        this.officialGazetteNumber = officialGazetteNumber;
+        this.publicationDate = publicationDate;
+        this.documentType = documentType;
+        this.signer = signer;
+        this.title = title;
+        this.issuedDate = issuedDate;
+        this.documentNumber = documentNumber;
+        this.pdfUrl = pdfUrl;
+        this.fields = fields;
+    }
+
+    public LegalDocumentDetail() {
+
+    }
 
     public String getPdfUrl() {
         return pdfUrl;

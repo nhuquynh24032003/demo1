@@ -3,12 +3,16 @@ package com.example.demo.Service;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.KnnSearch;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.HighlightField;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import co.elastic.clients.json.JsonData;
 import com.example.demo.Model.DocumentDetailEmbeddingES;
+import com.example.demo.Model.LegalDocument;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -118,25 +123,20 @@ public class ElasticsearchService {
 
         return results;
     }
+    //chat bot
     public String searchLegalDocuments(String userQuery) throws IOException {
-        // 🔍 1️⃣ Tìm kiếm các chunk liên quan từ Elasticsearch
         List<String> chunks = searchKnn(userQuery);
         System.out.println(chunks);
         if (chunks.isEmpty()) {
             return "Không tìm thấy văn bản nào phù hợp với câu hỏi của bạn.";
         }
-
         if (chunks.isEmpty()) {
             return "Không tìm thấy văn bản nào phù hợp với câu hỏi của bạn.";
         }
-        // 🏆 2️⃣ Rerank các chunk bằng GPT
-
-
        String relevantText = openAIService.rerankChunks(userQuery, chunks);
-
-
         return relevantText;
     }
+    //tìm kiem embedding
     public List<Map<String, Object>> searchDocuments(String query) throws IOException {
         String answer = openAIService.generateAnswer(query);
         JsonNode rootNode = objectMapper.readTree(answer);
@@ -162,7 +162,7 @@ public class ElasticsearchService {
                 )
                 .query(q -> q
                         .bool(b -> b
-                                .must(m -> m
+                                .should(m -> m
                                         .multiMatch(mm -> mm
                                                 .fields(Arrays.asList("chunkText", "title"))
                                                 .query(String.join(" ", keywords))
@@ -213,5 +213,39 @@ public class ElasticsearchService {
         }
         return new ArrayList<>(groupedResults.values());
     }
+    public List<LegalDocument> filterDocuments(
+            LocalDate issueFrom, LocalDate issueTo,
+            LocalDate effectiveFrom, LocalDate effectiveTo,
+            String documentType, String issuingAgency,
+            String field, String signer) {
+        BoolQuery
+        BoolQueryBuilder query = QueryBuilders.boolQuery();
 
+        if (issueFrom != null && issueTo != null) {
+            query.must(QueryBuilders.rangeQuery("issue_date").gte(issueFrom).lte(issueTo));
+        }
+
+        if (effectiveFrom != null && effectiveTo != null) {
+            query.must(QueryBuilders.rangeQuery("effective_date").gte(effectiveFrom).lte(effectiveTo));
+        }
+
+        if (documentType != null) {
+            query.must(QueryBuilders.termQuery("document_type", documentType));
+        }
+
+        if (issuingAgency != null) {
+            query.must(QueryBuilders.termQuery("issuing_agency", issuingAgency));
+        }
+
+        if (field != null) {
+            query.must(QueryBuilders.termQuery("field", field));
+        }
+
+        if (signer != null) {
+            query.must(QueryBuilders.termQuery("signer", signer));
+        }
+
+        SearchQuery searchQuery = new NativeSearchQuery(query);
+        return repository.search(searchQuery).getContent();
+    }
 }
