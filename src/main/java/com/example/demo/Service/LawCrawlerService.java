@@ -99,7 +99,9 @@ public class LawCrawlerService {
             if (!legalDocumentDetailRepository.existsByDetailUrl(doc.getDetailUrl())) {
                 Document detailPage = Jsoup.connect(doc.getDetailUrl()).get();
                 Element contentElement = detailPage.select("div.the-document-body.noidungtracuu").first();
-                String title = detailPage.select(".the-document-title").text();
+                Element titleElement = detailPage.selectFirst("h1.the-document-title");
+                String title = titleElement != null ? titleElement.text() : "Không tìm thấy tiêu đề";
+                System.out.println("Tiêu đề: " + title);
                 String content = (contentElement != null) ? contentElement.text() : "Không tìm thấy nội dung";
                 String issuingAgency = extractTableText(detailPage, "Cơ quan ban hành:");
                 String officialGazetteNumber = extractTableText(detailPage, "Số công báo:");

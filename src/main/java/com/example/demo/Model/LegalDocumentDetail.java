@@ -117,6 +117,6 @@ public class LegalDocumentDetail {
         return fields;
     }
     public String getTitle() { return title; }
-    public void setTitle(String content) { this.title = title; }
+    public void setTitle(String title) { this.title = title; }
 
 }

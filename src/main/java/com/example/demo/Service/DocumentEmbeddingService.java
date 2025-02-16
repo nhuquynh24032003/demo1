@@ -38,7 +38,6 @@
                     .orElseThrow(() -> new RuntimeException("Document not found"));
             // Lấy nội dung gốc
             String content = document.getContent().trim();
-
             // Kiểm tra nội dung có hợp lệ không
             if (content.isEmpty() || "Không tìm thấy nội dung".equalsIgnoreCase(content)) {
                 System.out.println("⚠ Bỏ qua documentId: " + documentId + " vì nội dung trống hoặc không hợp lệ.");
@@ -51,6 +50,7 @@
 
             IntStream.range(0, chunks.size()).forEach(index -> {
                 List<Double> embeddingVector = embeddingService.getEmbedding(chunks.get(index));
+                List<Double> embeddingTitleVector = embeddingService.getEmbedding(document.getTitle());
                 // Lưu vào Elasticsearch
                 DocumentDetailEmbeddingES esEntity = new DocumentDetailEmbeddingES();
                 esEntity.setId(documentId + "-" + index); // ID duy nhất
@@ -58,6 +58,7 @@
                 esEntity.setChunkIndex(index);
                 esEntity.setChunkText(chunks.get(index));
                 esEntity.setEmbedding(embeddingVector);
+                esEntity.setEmbedding_title(embeddingTitleVector);
                 esEntity.setTitle(document.getTitle());
                 esEmbeddings.add(esEntity);
 

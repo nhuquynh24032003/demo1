@@ -32,23 +32,11 @@ public class ElasticsearchService {
     public List<String> searchKnn(String query) throws IOException {
         String answer = openAIService.generateAnswer(query);
         JsonNode rootNode = objectMapper.readTree(answer);
-        //   String content = rootNode.path("choices").get(0).path("message").path("content").asText();
-        //  content = content.replaceAll("(?s)```json|```", "").trim();
         String content = rootNode.path("choices").get(0).path("message").path("content").asText();
-
-// Loại bỏ code block và trim lại chuỗi
         content = content.replaceAll("(?s)```json|```", "").trim();
-        //   List<String> keywords =  Arrays.asList(objectMapper.readValue(content, String[].class));
-        System.out.println(content);
         JsonNode jsonNode = objectMapper.readTree(content);
-
-        // Lấy danh sách keywords
         List<String> keywords = objectMapper.convertValue(jsonNode.get("keywords"), new TypeReference<List<String>>() {});
-
         System.out.println("Từ khóa trích xuất: " + keywords);
-
-
-
         List<Double> queryEmbedding = ollamaEmbeddingService.getEmbedding(query);
         List<Float> queryEmbeddingFloat = queryEmbedding.stream()
                 .map(Double::floatValue)
@@ -60,24 +48,40 @@ public class ElasticsearchService {
 
                 .queryVector(queryEmbeddingFloat) // Vector truy vấn
         );
-
+        KnnSearch knnTitle = KnnSearch.of(q -> q
+                .field("embedding_title") // Trường chứa embedding của title
+                .k(10)
+                .queryVector(queryEmbeddingFloat)
+        );
         Query fulltextQuery = Query.of(q -> q
                 .bool(b -> b
                         .should(keywords.stream()
-                                .map(keyword ->  Query.of(q2 -> q2
+                                .map(keyword -> Query.of(q2 -> q2
                                         .match(m -> m
-                                                .field("chunkText") // Tìm trong trường "content"
+                                                .field("title")
+                                                .query(keyword)
+                                                .boost(3.0F) // Ưu tiên cao hơn cho title
+                                        )
+                                ))
+                                .toList()
+                        )
+                        .should(keywords.stream()
+                                .map(keyword -> Query.of(q2 -> q2
+                                        .match(m -> m
+                                                .field("chunkText")
                                                 .query(keyword)
                                         )
                                 ))
                                 .toList()
                         )
-                        .minimumShouldMatch(String.valueOf(1))
+                        .minimumShouldMatch("1")
                 )
         );
+
         SearchRequest request = new SearchRequest.Builder()
                 .index("document_embedding") // Chỉ mục Elasticsearch
                 .knn(knnSearch)
+                .knn(knnTitle)
                 .query(fulltextQuery)// Truy vấn KNN
                 .sort(s -> s
                         .field(f -> f

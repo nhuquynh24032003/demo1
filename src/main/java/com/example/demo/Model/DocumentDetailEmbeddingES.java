@@ -31,6 +31,8 @@ public class DocumentDetailEmbeddingES {
     @Field(type = FieldType.Dense_Vector, dims = 768)
     private List<Double> embedding;
 
+    @Field(type = FieldType.Dense_Vector, dims = 768)
+    private List<Double> embedding_title;
     public DocumentDetailEmbeddingES() {}
 
     public DocumentDetailEmbeddingES(Long documentId, int chunkIndex, String chunkText, List<Double> embedding) {
@@ -61,4 +63,7 @@ public class DocumentDetailEmbeddingES {
 
     public String getTitle() { return title; }
     public void setTitle(String content) { this.title = title; }
+
+    public List<Double> getEmbedding_title() { return embedding_title; }
+    public void setEmbedding_title(List<Double> embedding_title) { this.embedding_title = embedding_title; }
 }

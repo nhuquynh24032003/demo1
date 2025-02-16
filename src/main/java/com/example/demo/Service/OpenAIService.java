@@ -13,6 +13,7 @@ import java.util.Map;
 
 @Service
 public class OpenAIService {
+
     private static final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
     public String rerankChunks(String userInput, List<String> chunks) {
         try {
@@ -51,7 +52,7 @@ public class OpenAIService {
             List<Map<String, String>> messages = List.of(
                     Map.of(
                             "role", "user",
-                            "content", "Trích xuất các từ khóa quan trọng về nội dung để tìm kiếm luật từ đoạn sau và trả về dưới dạng danh sách JSON:\\n\\n" + userInput
+                            "content", "Trích xuất các từ khóa quan trọng về nội dung để tìm kiếm luật từ đoạn sau và trả về dưới dạng danh sách JSON (chỉ json):\\n\\n" + userInput
                     )
             );
 
