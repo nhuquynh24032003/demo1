@@ -47,6 +47,9 @@ public class DocumentDetailEmbeddingES {
     private String effectiveDate;
     @Field(type = FieldType.Text)// Ngày hết hiệu lực
     private List<String> fields;// Lĩnh vực
+    public DocumentDetailEmbeddingES() {
+        // Constructor mặc định
+    }
     public DocumentDetailEmbeddingES(Long documentId, int chunkIndex, String chunkText, List<Double> embedding, List<Double> embedding_title, String issuingAgency, String officialGazetteNumber, String publicationDate, String documentType, String signer, String title, String issuedDate, String documentNumber, String effectiveDate, List<String> fields) {
         this.chunkIndex = chunkIndex;
         this.chunkText = chunkText;

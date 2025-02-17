@@ -139,6 +139,7 @@ public class ElasticsearchService {
     //tìm kiem embedding
     public List<Map<String, Object>> searchDocuments(String query) throws IOException {
         String answer = openAIService.generateAnswer(query);
+        System.out.println(answer);
         JsonNode rootNode = objectMapper.readTree(answer);
         String content = rootNode.path("choices").get(0).path("message").path("content").asText();
         content = content.replaceAll("(?s)```json|```", "").trim();
@@ -151,7 +152,7 @@ public class ElasticsearchService {
         List<Float> queryEmbeddingFloat = embeddingVector.stream()
                 .map(Double::floatValue)
                 .toList();
-
+        System.out.println(queryEmbeddingFloat);
         SearchRequest request = new SearchRequest.Builder()
                 .index("document_embedding")
                 .knn(knnQuery -> knnQuery
@@ -176,8 +177,9 @@ public class ElasticsearchService {
                         .postTags("</b>")
                 )
                 .build();
-
+        System.out.println(request.toString());
         SearchResponse<DocumentDetailEmbeddingES> response = client.search(request, DocumentDetailEmbeddingES.class);
+        System.out.println(response.toString());
         List<Map<String, Object>> results = new ArrayList<>();
         for (Hit<DocumentDetailEmbeddingES> hit : response.hits().hits()) {
             Map result = objectMapper.convertValue(hit.source(), Map.class);
@@ -242,9 +244,12 @@ public class ElasticsearchService {
             filters.add(Query.of(q -> q.match(t -> t.field("issuingAgency").query(issuingAgency))));
         }
         // Lọc theo lĩnh vực hoạt động
-        if (field != null) {
-            filters.add(Query.of(q -> q.match(t -> t.field("field").query(field))));
+        // Lọc theo lĩnh vực hoạt động (kiểm tra nếu một từ xuất hiện trong mảng field)
+        // Sử dụng wildcard để tìm từ trong mảng
+        if (field != null && !field.isEmpty()) {
+            filters.add(Query.of(q -> q.match(t -> t.field("fields").query(field))));
         }
+
 
         // Lọc theo người ký
         if (signer != null) {
